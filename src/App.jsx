@@ -42,6 +42,24 @@ function App() {
 
     return model;
   }
+
+  // Train the model with the .fit API
+  async function trainModel(model, trainingFeatureTensor, trainingLabelTensor) {
+
+    const {onBatchEnd, onEpochEnd} = tfvis.show.fitCallbacks(
+      {name: 'Training performance'},
+      ['loss']
+    )
+
+    return model.fit(trainingFeatureTensor, trainingLabelTensor, {
+      batchSize: 32,
+      epochs: 20,
+      validationSplit: 0.2,
+      callbacks: {
+        onEpochEnd,
+      }
+    });
+  }
    
   useEffect(async () => {
 
@@ -95,12 +113,27 @@ function App() {
     
     // Compile the model adding loss, optimizer
     // create an optimizer
-    const optimizer = tf.train.sgd(0.1);
+    const optimizer = tf.train.sgd(0.1); // In this case I've used an sgd aka stochastic gradient descent with a learning reate of 0.1
     model.compile({
       loss: 'meanSquaredError', // A median squared error
-      optimizer, // In this case I've used an sgd aka stochastic gradient descent with a learning reate of 0.1
+      optimizer, // Since the variable name matche the kay name, the variable is omitted
     })
 
+    const result = await trainModel(model, trainingFeatureTensor, trainingLabelTensor);
+    // Following best practices
+    // Training set loss
+    const trainingLoss = result.history.loss.pop();
+    console.log(`Training set loss: ${trainingLoss}`)
+
+    // Validation set loss
+    const validationLoss = result.history.val_loss.pop();
+    console.log(`Validation set loss: ${validationLoss}`)
+
+    // Testing set loss
+    const lossTensor = model.evaluate(testingFeatureTensor, testingLabelTensor);
+    const loss = await lossTensor.dataSync();
+    console.log(`Testing set loss: ${loss}`)
+    
   }, [])
 
   return (
